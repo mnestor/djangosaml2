@@ -16,14 +16,19 @@
 import logging
 
 from django.conf import settings
+from django.contrib import auth
 from django.contrib.auth.backends import ModelBackend
-from django.contrib.auth.models import User, SiteProfileNotAvailable
+from django.contrib.auth.models import SiteProfileNotAvailable
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from djangosaml2.signals import pre_user_save
 
 logger = logging.getLogger('djangosaml2')
 
+try:
+    User = auth.get_user_model()
+except AttributeError:
+    User = auth.models.User
 
 class Saml2Backend(ModelBackend):
 
@@ -44,8 +49,6 @@ class Saml2Backend(ModelBackend):
         django_user_main_attribute = getattr(
             settings, 'SAML_DJANGO_USER_MAIN_ATTRIBUTE', 'username')
 
-        logger.debug('attributes: %s' % attributes)
-        logger.debug('attribute_mapping: %s' % attribute_mapping)
         saml_user = None
         for saml_attr, django_fields in attribute_mapping.items():
             if (django_user_main_attribute in django_fields
@@ -141,6 +144,8 @@ class Saml2Backend(ModelBackend):
             profile = None
         except SiteProfileNotAvailable:
             profile = None
+        except AttributeError:
+            profile = user
 
         user_modified = False
         profile_modified = False
@@ -197,3 +202,4 @@ class Saml2Backend(ModelBackend):
             return True
 
         return False
+
